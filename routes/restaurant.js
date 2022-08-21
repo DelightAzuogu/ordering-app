@@ -1,38 +1,15 @@
 const express = require("express");
 const { body } = require("express-validator");
 
-const User = require("../model/user");
-const authController = require("../controllers/auth");
+const restaurantController = require("../controllers/restaurant");
 const { Restaurant } = require("../model/restaurant");
+const isAuth = require("../util/is-auth");
 
 const router = express.Router();
 
-//signup user put route
-router.put(
-  "/signup/user",
-  [
-    body("firstname").isAlpha().withMessage("invalid name"),
-    body("lastname").isAlpha().withMessage("invalid name"),
-    body("email")
-      .isEmail()
-      .withMessage("Please enter a valid email.")
-      .custom((value) => {
-        return User.findOne({ email: value }).then((user) => {
-          if (user) {
-            return Promise.reject("email already exists");
-          }
-        });
-      })
-      .normalizeEmail()
-      .trim(),
-    body("password").trim().isLength({ min: 5 }),
-  ],
-  authController.putSignupUser
-);
-
 //signup for restu
 router.put(
-  "/signup/restaurant",
+  "/signup",
   [
     body("name").isAlpha().withMessage("invalid name"),
     body("address")
@@ -57,33 +34,12 @@ router.put(
         });
       }),
   ],
-  authController.putSignupRest
-);
-
-//login user post route
-router.post(
-  "/login/user",
-  [
-    body("password").trim().isLength({ min: 5 }),
-    body("email")
-      .isEmail()
-      .withMessage("Please enter a valid email.")
-      .trim()
-      .normalizeEmail()
-      .custom((value) => {
-        return User.findOne({ email: value }).then((user) => {
-          if (!user) {
-            return Promise.reject("email address doesn't exists!");
-          }
-        });
-      }),
-  ],
-  authController.postLoginUser
+  restaurantController.putSignupRest
 );
 
 //login for resturants
 router.post(
-  "/login/restaurant",
+  "/login",
   [
     body("password").trim().isLength({ min: 5 }),
     body("email")
@@ -99,7 +55,7 @@ router.post(
         });
       }),
   ],
-  authController.postLoginRest
+  restaurantController.postLoginRest
 );
 
 module.exports = router;

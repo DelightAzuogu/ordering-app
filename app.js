@@ -2,13 +2,17 @@ const express = require("express");
 const mongoose = require("mongoose");
 require("dotenv").config();
 
-const authRoute = require("./routes/auth");
+const userRoute = require("./routes/user");
+const restRoute = require("./routes/restaurant");
+const menuRoute = require("./routes/menu");
 
 const app = express();
 
 app.use(express.urlencoded());
 
-app.use("/auth", authRoute);
+app.use("/user", userRoute);
+app.use("/restaurant", restRoute);
+app.use("/menu-item", menuRoute);
 
 app.use((err, req, res, next) => {
   const status = err.status || 500;
