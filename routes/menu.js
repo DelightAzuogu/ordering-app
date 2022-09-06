@@ -9,6 +9,7 @@ const router = express.Router();
 
 const { v4: uuidv4 } = require("uuid");
 const { memoryStorage } = require("multer");
+const { Restaurant } = require("../model/restaurant");
 
 //multer option
 const fileFilter = (req, file, cb) => {
@@ -26,9 +27,29 @@ const fileFilter = (req, file, cb) => {
 const upload = new Multer({ storage: memoryStorage(), fileFilter });
 
 router.put(
-  "/add-menu-item",
+  "/add-item",
   upload.single("image"),
-  menuController.putAddMenuItem
+  [
+    body("name").isAlpha().trim(),
+    body("description").isAlpha().trim(),
+    body("price").isNumeric().trim(),
+  ],
+  isAuth,
+  menuController.putAddItem
 );
+
+router.post(
+  "/edit-item/:id",
+  upload.single("image"),
+  [
+    body("name").isAlpha().trim(),
+    body("description").isAlpha().trim(),
+    body("price").isNumeric().trim(),
+  ],
+  isAuth,
+  menuController.postEditMenuItem
+);
+
+router.delete("/delete-item/:id", isAuth, menuController.deleteDeleteItem);
 
 module.exports = router;

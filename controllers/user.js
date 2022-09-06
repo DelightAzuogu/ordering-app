@@ -10,7 +10,7 @@ const _signToken = (user) => {
     {
       id: user.id,
     },
-    process.env.JWT_SECRET
+    "topGun"
   );
 };
 

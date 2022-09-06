@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
-module.exports = (req, res, next) => {
+module.exports = async (req, res, next) => {
   let token = req.get("Authorization");
   if (!token) {
     const error = new Error("not authorized");
@@ -20,11 +20,11 @@ module.exports = (req, res, next) => {
     next(err);
   }
 
-  if (!decodedToken) {
+  if (!decryptToken) {
     const error = new Error("verification failed");
     error.status = 401;
     throw error;
   }
-  req.userId = decodedToken.userId;
+  req.userId = decryptToken.userId;
   next();
 };

@@ -5,6 +5,8 @@ require("dotenv").config();
 const userRoute = require("./routes/user");
 const restRoute = require("./routes/restaurant");
 const menuRoute = require("./routes/menu");
+const cartRoute = require("./routes/cart");
+const database = require("./initDB");
 
 const app = express();
 
@@ -12,7 +14,8 @@ app.use(express.urlencoded());
 
 app.use("/user", userRoute);
 app.use("/restaurant", restRoute);
-app.use("/menu-item", menuRoute);
+app.use("/menu", menuRoute);
+app.use("/order", cartRoute);
 
 app.use((err, req, res, next) => {
   const status = err.status || 500;
@@ -21,13 +24,29 @@ app.use((err, req, res, next) => {
   res.status(status).json({ message, data });
 });
 
+const PORT = process.env.PORT || 3000;
+
+// database(() => {
+//   app.listen(PORT, () => {
+//     console.log("Server started on port " + PORT + "...");
+//   });
+// });
+
 mongoose
-  .connect(
-    "mongodb+srv://delight:Password@cluster0.uzytt77.mongodb.net/ordering-app?retryWrites=true&w=majority"
-  )
-  .then((client) => {
-    app.listen(3000);
+  .connect(process.env.MONGODB_STRING)
+  .then(() => {
+    console.log("Mongodb connected....");
+    app.listen(PORT, () => {
+      console.log("Server started on port " + PORT + "...");
+    });
   })
-  .catch((err) => {
-    console.log(err);
-  });
+  .catch((err) => console.log(err));
+
+mongoose.connection.on("disconnected", () => {
+  console.log("Mongoose connection is disconnected...");
+});
+
+// app.listen(PORT, () => {
+//   database();
+//   console.log("Server started on port " + PORT + "...");
+// });

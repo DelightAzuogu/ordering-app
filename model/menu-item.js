@@ -10,12 +10,13 @@ const menuItemSchema = new Schema({
     required: true,
   },
   imageUrl: String,
+  imageId: String,
 
   price: {
     type: Number,
     required: true,
   },
-  ResturantId: {
+  restaurantId: {
     type: String,
     required: true,
   },
