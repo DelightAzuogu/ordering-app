@@ -12,11 +12,7 @@ router.put(
   "/signup",
   [
     body("name").isAlpha().withMessage("invalid name"),
-    body("address")
-      .isAlpha()
-      .withMessage("invalid address")
-      .isLength({ max: 50 })
-      .withMessage("exceed length"),
+    body("address").isLength({ max: 50 }).withMessage("exceed length"),
     body("phone")
       .isNumeric({ no_symbols: false })
       .withMessage("invalid phone number"),

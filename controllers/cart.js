@@ -1,5 +1,5 @@
 const User = require("../model/user");
-const Menu = require("../model/menu-item");
+const { MenuItem } = require("../model/menu-item");
 const Cart = require("../model/cart");
 
 exports.postAddToCart = async (req, res, next) => {
@@ -13,7 +13,7 @@ exports.postAddToCart = async (req, res, next) => {
     }
 
     const itemId = req.params.itemId;
-    const item = await Menu.findOne({ id: itemId });
+    const item = await MenuItem.findOne({ id: itemId });
     if (!item) {
       const err = new Error("menut Item not found");
       err.status = 400;
@@ -25,7 +25,7 @@ exports.postAddToCart = async (req, res, next) => {
     const createCart = {
       itemId,
       restaurantId: restId,
-      UserId,
+      userId,
     };
 
     const cart = await Cart.create(createCart);

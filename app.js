@@ -15,9 +15,10 @@ app.use(express.urlencoded());
 app.use("/user", userRoute);
 app.use("/restaurant", restRoute);
 app.use("/menu", menuRoute);
-app.use("/order", cartRoute);
+app.use("/cart", cartRoute);
 
 app.use((err, req, res, next) => {
+  console.log(err);
   const status = err.status || 500;
   const message = err.message || "server Error";
   const data = err.data;
@@ -26,14 +27,11 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 
-// database(() => {
-//   app.listen(PORT, () => {
-//     console.log("Server started on port " + PORT + "...");
-//   });
-// });
-
 mongoose
-  .connect(process.env.MONGODB_STRING)
+  .connect("mongodb://localhost:27017/ordering-app", {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
   .then(() => {
     console.log("Mongodb connected....");
     app.listen(PORT, () => {
@@ -45,8 +43,3 @@ mongoose
 mongoose.connection.on("disconnected", () => {
   console.log("Mongoose connection is disconnected...");
 });
-
-// app.listen(PORT, () => {
-//   database();
-//   console.log("Server started on port " + PORT + "...");
-// });

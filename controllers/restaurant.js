@@ -10,14 +10,20 @@ const _signToken = (user) => {
     {
       id: user.id,
     },
-    process.env.JWT_SECRET
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "20h",
+    }
   );
 };
 
 //login restaurants
 exports.postLoginRest = async (req, res, next) => {
   const valErr = ValErrorCheck(req);
-  if (valErr) throw valErr;
+  if (valErr) {
+    console.log;
+    next(valErr);
+  }
 
   const email = req.body.email;
   const pw = req.body.password;

@@ -10,7 +10,6 @@ module.exports = async (req, res, next) => {
   }
 
   token = token.split(" ")[1];
-
   let decryptToken;
 
   try {
@@ -25,6 +24,7 @@ module.exports = async (req, res, next) => {
     error.status = 401;
     throw error;
   }
-  req.userId = decryptToken.userId;
+
+  req.userId = decryptToken.id;
   next();
 };

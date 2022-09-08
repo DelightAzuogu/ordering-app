@@ -1,0 +1,23 @@
+version: "3"
+
+services:
+  m_db:
+    container_name: m_db
+    image: mongo
+    ports:
+      - '27027:27017'
+    networks: 
+      - my-network
+
+  app:
+    # container_name: ordering-app
+    restart: always
+    build: .
+    ports: 
+      - '9000:9000'
+    networks: 
+      - my-network
+
+networks: 
+  my-network:
+    driver: bridge

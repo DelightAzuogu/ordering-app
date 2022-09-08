@@ -10,7 +10,10 @@ const _signToken = (user) => {
     {
       id: user.id,
     },
-    "topGun"
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "1h",
+    }
   );
 };
 
@@ -83,8 +86,9 @@ exports.putSignupUser = async (req, res, next) => {
   }
 };
 
+//EDIT
 exports.putEditUser = async (req, res, next) => {
-  const valErr = validationError();
+  const valErr = validationError(req);
   if (valErr) next(valErr);
 
   const firstname = req.body.firstname;
@@ -108,14 +112,9 @@ exports.putEditUser = async (req, res, next) => {
       throw err;
     }
 
-    const editedUser = await User.findOneAndUpdate(
-      { id },
-      { firstname, lastname, phone }
-    );
+    await User.findOneAndUpdate({ id }, { firstname, lastname, phone });
 
-    const token = _signToken(editedUser);
-
-    res.status(200).json({ msg: "updated", token });
+    res.status(200).json({ msg: "updated" });
   } catch (err) {
     next(err);
   }
