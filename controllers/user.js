@@ -48,7 +48,6 @@ exports.postLoginUser = async (req, res, next) => {
 exports.putSignupUser = async (req, res, next) => {
   try {
     const valErr = validationError(req);
-    console.log(valErr);
     if (valErr) {
       throw valErr;
     }

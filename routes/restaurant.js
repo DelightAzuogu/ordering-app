@@ -11,7 +11,7 @@ const router = express.Router();
 router.put(
   "/signup",
   [
-    body("name").isAlpha().withMessage("invalid name"),
+    body("name"),
     body("address").isLength({ max: 50 }).withMessage("exceed length"),
     body("phone")
       .isNumeric({ no_symbols: false })
@@ -53,5 +53,29 @@ router.post(
   ],
   restaurantController.postLoginRest
 );
+
+router.put(
+  "/edit",
+  isAuth,
+  [
+    body("name"),
+    body("address").isLength({ max: 50 }).withMessage("exceed length"),
+    body("phone")
+      .isNumeric({ no_symbols: false })
+      .withMessage("invalid phone number"),
+  ],
+  restaurantController.putEditRestaurant
+);
+
+router.get(
+  "/check-password",
+  body("password").trim().isLength({ min: 5 }),
+  isAuth,
+  restaurantController.getCheckPassword
+);
+
+router.delete("/", isAuth, restaurantController.deleteRestaurant);
+
+router.get("/:id", restaurantController.getRestaurant);
 
 module.exports = router;

@@ -4,7 +4,7 @@ require("dotenv").config();
 
 const userRoute = require("./routes/user");
 const restRoute = require("./routes/restaurant");
-const menuRoute = require("./routes/menu");
+const menuRoute = require("./routes/menu-item");
 const cartRoute = require("./routes/cart");
 const database = require("./initDB");
 

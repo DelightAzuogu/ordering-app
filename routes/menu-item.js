@@ -50,6 +50,6 @@ router.post(
   menuController.postEditMenuItem
 );
 
-router.delete("/delete-item/:id", isAuth, menuController.deleteDeleteItem);
+router.delete("/delete-item/:id", isAuth, menuController.deleteItem);
 
 module.exports = router;

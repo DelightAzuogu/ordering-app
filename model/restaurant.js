@@ -25,6 +25,11 @@ const restaurantSchema = new Schema({
     type: Number,
     default: 0,
   },
+  status: {
+    type: Boolean,
+    required: true,
+    default: true,
+  },
 });
 
 exports.Restaurant = mongoose.model("Restaurant", restaurantSchema);
