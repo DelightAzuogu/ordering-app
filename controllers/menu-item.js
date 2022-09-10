@@ -8,17 +8,18 @@ const {
   googleDriveGetLink,
   googleDriveUpload,
 } = require("../util/google-drive");
+const Cart = require("../model/cart");
+const newError = require("../util/error");
 
-//ADD ITEM
+//ADD menu item
 exports.putAddItem = async (req, res, next) => {
   const err = validationError(req);
   if (err) next(err);
 
+  //check for existence od restaurant
   const rest = await Restaurant.findOne({ id: req.userId });
   if (!rest) {
-    const err = new Error("invalid restaurant");
-    err.status = 400;
-    next(err);
+    next(newError("invalid restaurant", 400));
   }
 
   const name = req.body.name;
@@ -26,8 +27,10 @@ exports.putAddItem = async (req, res, next) => {
   const price = req.body.price;
   const restId = req.userId;
 
+  //converting the img buffer to a readable stream
   const stream = Readable.from(req.file.buffer);
 
+  //uploading the img to google drive
   const uploadImg = await googleDriveUpload(req, stream);
   if (uploadImg instanceof Error) {
     next(uploadImg);
@@ -35,9 +38,11 @@ exports.putAddItem = async (req, res, next) => {
 
   const imageId = uploadImg.data.id;
 
+  // get the img link
   const imgLink = await googleDriveGetLink(uploadImg.data.id);
 
   if (imgLink instanceof Error) {
+    //delete the img if eerror
     const deleteImg = googleDriveDelete(imageId);
     if (deleteImg instanceof Error) {
       next(deleteImg);
@@ -46,6 +51,7 @@ exports.putAddItem = async (req, res, next) => {
   }
   const imageUrl = imgLink.data.webViewLink;
 
+  //create item
   try {
     const createMenuItem = {
       name,
@@ -58,6 +64,7 @@ exports.putAddItem = async (req, res, next) => {
 
     const menuItem = await MenuItem.create(createMenuItem);
 
+    //add it to the menu of the restaurant
     rest.menu.push(menuItem);
     const updatedrest = rest.save();
 
@@ -97,6 +104,9 @@ exports.postEditMenuItem = async (req, res, next) => {
     let imageUrl = menuItem.imageUrl;
 
     if (req.file) {
+      //check if the img was changed
+      //upload the new img and delete the old img
+      //change the img links
       const stream = Readable.from(req.file.buffer);
 
       const uploadImg = await googleDriveUpload(req, stream);
@@ -104,6 +114,7 @@ exports.postEditMenuItem = async (req, res, next) => {
         throw uploadImg;
       }
 
+      //updating the img in drive
       const imgLink = await googleDriveGetLink(uploadImg.data.id);
 
       if (imgLink instanceof Error) {
@@ -113,6 +124,7 @@ exports.postEditMenuItem = async (req, res, next) => {
         }
         throw imgLink;
       }
+
       const deleteImg = googleDriveDelete(imageId);
       if (deleteImg instanceof Error) {
         throw deleteImg;
@@ -121,6 +133,7 @@ exports.postEditMenuItem = async (req, res, next) => {
       imageUrl = imgLink.data.webViewLink;
     }
 
+    //update the menuitem
     menuItem.name = name;
     menuItem.description = description;
     menuItem.price = price;
@@ -128,6 +141,15 @@ exports.postEditMenuItem = async (req, res, next) => {
     menuItem.imageId = imageId;
     const updatedMenuItem = await menuItem.save();
 
+    //updating the cart items
+    await Cart.updateMany(
+      { itemId: menuItem.id },
+      {
+        item: menuItem,
+      }
+    );
+
+    //updating the restaurant item
     const newMenu = rest.menu.map((element) => {
       if (element.id === menuItem.id) {
         return updatedMenuItem;
@@ -135,10 +157,9 @@ exports.postEditMenuItem = async (req, res, next) => {
         return element;
       }
     });
-
     rest.menu = newMenu;
-
     const updatedRest = await rest.save();
+
     res.status(201).json({
       msg: "updated",
       restId: updatedRest.id,
@@ -152,6 +173,7 @@ exports.postEditMenuItem = async (req, res, next) => {
 //DELETE ITEM
 exports.deleteItem = async (req, res, next) => {
   try {
+    //check rest
     const rest = await Restaurant.findOne({ id: req.userId });
     if (!rest) {
       const err = new Error("invalid restaurant");
@@ -160,19 +182,25 @@ exports.deleteItem = async (req, res, next) => {
     }
     const id = req.params.id;
 
+    //find and delete the menuItem
     const menuItem = await MenuItem.findOneAndDelete({ id });
 
+    //delete the img from drive
     const deleteImg = googleDriveDelete(menuItem.imageId);
     if (deleteImg instanceof Error) {
       throw deleteImg;
     }
 
+    //deleting the item in the restaurant menu
     rest.menu = rest.menu.filter((element) => {
       if (element.id != id) {
         return element;
       }
     });
     await rest.save();
+
+    //deleting from carts as well
+    await Cart.deleteMany({ itemId: menuItem.id });
 
     res.status(200).json({ msg: "deleted" });
   } catch (err) {

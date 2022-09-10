@@ -1,4 +1,7 @@
 const jwt = require("jsonwebtoken");
+const { Restaurant } = require("../model/restaurant");
+const User = require("../model/user");
+const newError = require("../util/error");
 require("dotenv").config();
 
 module.exports = async (req, res, next) => {
@@ -26,5 +29,14 @@ module.exports = async (req, res, next) => {
   }
 
   req.userId = decryptToken.id;
+
+  const user = await User.findOne({ id: req.userId });
+  if (!user) {
+    const rest = await Restaurant.findOne({ id: req.userId });
+    if (!rest) {
+      throw newError("user not found", 400);
+    }
+  }
+
   next();
 };

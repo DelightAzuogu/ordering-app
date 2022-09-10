@@ -7,7 +7,9 @@ const ValErrorCheck = require("../util/validationError");
 const newError = require("../util/error");
 const { MenuItem } = require("../model/menu-item");
 const { googleDriveDelete } = require("../util/google-drive");
+const Cart = require("../model/cart");
 
+//sign auth token
 const _signToken = (user) => {
   return jwt.sign(
     {
@@ -32,6 +34,7 @@ exports.postLoginRest = async (req, res, next) => {
   try {
     const rest = await Restaurant.findOne({ email });
 
+    //check password
     const pwEqual = bcrypt.compareSync(pw, rest.password);
     if (!pwEqual) {
       throw newError("invalid password", 401);
@@ -42,6 +45,7 @@ exports.postLoginRest = async (req, res, next) => {
     rest.status = true;
     await rest.save();
 
+    //check items in the menu
     const hasItem = rest.menu.length > 0;
 
     res.status(200).json({ msg: "logged in", hasItem, token });
@@ -62,13 +66,16 @@ exports.putSignupRest = async (req, res, next) => {
   const address = req.body.address || "";
   const phone = req.body.phone;
 
+  //confirm the passwords
   if (confirmPw !== pw) {
     throw newError("passwords not match", 400);
   }
 
   try {
+    //hash the password
     const hashpw = await bcrypt.hash(pw, 12);
 
+    //create the rest
     const createRest = {
       name,
       email,
@@ -87,16 +94,20 @@ exports.putSignupRest = async (req, res, next) => {
   }
 };
 
+//editing the rest
 exports.putEditRestaurant = async (req, res, next) => {
   const valErr = ValErrorCheck(req);
   if (valErr) next(valErr);
 
   const restId = req.userId;
   try {
+    //checking for rest
     const rest = await Restaurant.findOne({ id: restId });
     if (!rest) {
       throw newError("restaurant not found", 400);
     }
+
+    //updating the rest
     rest.name = req.body.name;
     rest.address = req.body.address;
     rest.phone = req.body.phone;
@@ -108,6 +119,7 @@ exports.putEditRestaurant = async (req, res, next) => {
   }
 };
 
+//checking if password is correct
 exports.getCheckPassword = async (req, res, next) => {
   const valErr = ValErrorCheck(req);
   if (valErr) next(valErr);
@@ -129,6 +141,7 @@ exports.getCheckPassword = async (req, res, next) => {
   }
 };
 
+//geting the rest
 exports.getRestaurant = async (req, res, next) => {
   const restId = req.params.id;
   try {
@@ -143,6 +156,8 @@ exports.getRestaurant = async (req, res, next) => {
   }
 };
 
+//deleting menu items
+//not an end point, it is used for the deleting the rest
 const deleteMenuItem = async (id) => {
   try {
     const menuItem = await MenuItem.findOneAndDelete({ id });
@@ -150,12 +165,16 @@ const deleteMenuItem = async (id) => {
     if (deleteImg instanceof Error) {
       throw deleteImg;
     }
+
+    await Cart.deleteMany({ itemId: menuItem.id });
+
     return true;
   } catch (err) {
     return err;
   }
 };
 
+//deleting the rest
 exports.deleteRestaurant = async (req, res, next) => {
   const restId = req.userId;
 
@@ -165,6 +184,7 @@ exports.deleteRestaurant = async (req, res, next) => {
       throw newError("restaurant not found", 400);
     }
 
+    //delete the menu items
     for (let i = 0; i < rest.menu.length; i++) {
       const deleteItem = await deleteMenuItem(rest.menu[i].id);
       if (deleteItem instanceof Error) {

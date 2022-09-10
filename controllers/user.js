@@ -5,6 +5,7 @@ require("dotenv").config();
 const User = require("../model/user");
 const validationError = require("../util/validationError");
 
+//sign the token
 const _signToken = (user) => {
   return jwt.sign(
     {
@@ -58,13 +59,17 @@ exports.putSignupUser = async (req, res, next) => {
     const firstname = req.body.firstname;
     const lastname = req.body.lastname;
 
+    //confirm passwords
     if (confirmPw !== pw) {
       const err = new Error("passwords do not match");
       err.status = 401;
       throw err;
     }
 
+    //hash password
     const hashPassword = await bcrypt.hash(pw, 12);
+
+    //create user
     const createUser = {
       firstname,
       lastname,
@@ -104,6 +109,7 @@ exports.putEditUser = async (req, res, next) => {
       throw err;
     }
 
+    //comparing passwords
     const pwEqual = bcrypt.compareSync(password, user.password);
     if (!pwEqual) {
       const err = new Error("invalid password");
@@ -111,6 +117,7 @@ exports.putEditUser = async (req, res, next) => {
       throw err;
     }
 
+    //updating the user
     await User.findOneAndUpdate({ id }, { firstname, lastname, phone });
 
     res.status(200).json({ msg: "updated" });

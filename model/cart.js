@@ -1,5 +1,5 @@
 const { Schema, default: mongoose } = require("mongoose");
-const { MenuItem } = require("./menu-item");
+const { MenuItem, menuItemSchema } = require("./menu-item");
 
 const cartSchema = new Schema({
   itemId: {
@@ -12,6 +12,15 @@ const cartSchema = new Schema({
   },
   userId: {
     type: String,
+    require: true,
+  },
+  quantity: {
+    type: Number,
+    require: true,
+    default: 1,
+  },
+  item: {
+    type: menuItemSchema,
     require: true,
   },
 });
