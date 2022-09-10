@@ -4,6 +4,7 @@ require("dotenv").config();
 
 const User = require("../model/user");
 const validationError = require("../util/validationError");
+const newError = require("../util/error");
 
 //sign the token
 const _signToken = (user) => {
@@ -32,9 +33,7 @@ exports.postLoginUser = async (req, res, next) => {
     const pwEqual = bcrypt.compareSync(pw, user.password);
 
     if (!pwEqual) {
-      const error = new Error("invalid password");
-      error.status = 401;
-      throw error;
+      throw newError("invalid Password", 400);
     }
 
     const token = _signToken(user);
@@ -61,9 +60,7 @@ exports.putSignupUser = async (req, res, next) => {
 
     //confirm passwords
     if (confirmPw !== pw) {
-      const err = new Error("passwords do not match");
-      err.status = 401;
-      throw err;
+      throw newError("passwords do not match", 401);
     }
 
     //hash password
@@ -103,18 +100,11 @@ exports.putEditUser = async (req, res, next) => {
 
   try {
     const user = await User.findOne({ id });
-    if (!user) {
-      const err = new Error("invalid user");
-      err.status = 401;
-      throw err;
-    }
 
     //comparing passwords
     const pwEqual = bcrypt.compareSync(password, user.password);
     if (!pwEqual) {
-      const err = new Error("invalid password");
-      err.status = 401;
-      throw err;
+      throw newError("invalid Password", 401);
     }
 
     //updating the user

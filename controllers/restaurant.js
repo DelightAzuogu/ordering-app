@@ -56,22 +56,22 @@ exports.postLoginRest = async (req, res, next) => {
 
 //restauratn sign up page
 exports.putSignupRest = async (req, res, next) => {
-  const valErr = ValErrorCheck(req);
-  if (valErr) next(valErr);
-
-  const email = req.body.email;
-  const name = req.body.name;
-  const pw = req.body.password;
-  const confirmPw = req.body.confirmPassword;
-  const address = req.body.address || "";
-  const phone = req.body.phone;
-
-  //confirm the passwords
-  if (confirmPw !== pw) {
-    throw newError("passwords not match", 400);
-  }
-
   try {
+    const valErr = ValErrorCheck(req);
+    if (valErr) next(valErr);
+
+    const email = req.body.email;
+    const name = req.body.name;
+    const pw = req.body.password;
+    const confirmPw = req.body.confirmPassword;
+    const address = req.body.address || "";
+    const phone = req.body.phone;
+
+    //confirm the passwords
+    if (confirmPw !== pw) {
+      throw newError("passwords not match", 400);
+    }
+
     //hash the password
     const hashpw = await bcrypt.hash(pw, 12);
 
@@ -99,20 +99,18 @@ exports.putEditRestaurant = async (req, res, next) => {
   const valErr = ValErrorCheck(req);
   if (valErr) next(valErr);
 
-  const restId = req.userId;
+  const restId = req.restId;
   try {
-    //checking for rest
-    const rest = await Restaurant.findOne({ id: restId });
-    if (!rest) {
-      throw newError("restaurant not found", 400);
-    }
-
     //updating the rest
-    rest.name = req.body.name;
-    rest.address = req.body.address;
-    rest.phone = req.body.phone;
+    const rest = await Restaurant.findOneAndUpdate(
+      { id: restId },
+      {
+        name: req.body.name,
+        address: req.body.address,
+        phone: req.body.phone,
+      }
+    );
 
-    const updatedRest = await rest.save();
     res.status(200).json({ msg: "edited" });
   } catch (err) {
     next(err);
@@ -125,10 +123,7 @@ exports.getCheckPassword = async (req, res, next) => {
   if (valErr) next(valErr);
 
   try {
-    const rest = await Restaurant.findOne({ id: req.userId });
-    if (!rest) {
-      throw newError("restaurant not found", 400);
-    }
+    const rest = await Restaurant.findOne({ id: req.restId });
 
     const passwordMatch = bcrypt.compareSync(req.body.password, rest.password);
     if (passwordMatch) {
@@ -176,13 +171,10 @@ const deleteMenuItem = async (id) => {
 
 //deleting the rest
 exports.deleteRestaurant = async (req, res, next) => {
-  const restId = req.userId;
+  const restId = req.restId;
 
   try {
     const rest = await Restaurant.findOneAndDelete({ id: restId });
-    if (!rest) {
-      throw newError("restaurant not found", 400);
-    }
 
     //delete the menu items
     for (let i = 0; i < rest.menu.length; i++) {

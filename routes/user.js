@@ -3,7 +3,7 @@ const { body } = require("express-validator");
 
 const User = require("../model/user");
 const userController = require("../controllers/user");
-const isAuth = require("../util/is-auth");
+const userAuth = require("../util/user-auth");
 
 const router = express.Router();
 
@@ -58,7 +58,7 @@ router.put(
     body("lastname").isAlpha().withMessage("invalid name"),
     body("password").trim().isLength({ min: 5 }),
   ],
-  isAuth,
+  userAuth,
   userController.putEditUser
 );
 

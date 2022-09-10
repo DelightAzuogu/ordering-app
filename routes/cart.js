@@ -1,7 +1,7 @@
 const express = require("express");
 const { body } = require("express-validator");
 
-const isAuth = require("../util/is-auth");
+const userAuth = require("../util/user-auth");
 const cartController = require("../controllers/cart");
 
 const router = express.Router();
@@ -9,14 +9,14 @@ const router = express.Router();
 router.post(
   "/add-to-cart/:itemId",
   [body("quantity").isNumeric().withMessage("invalid quantity")],
-  isAuth,
+  userAuth,
   cartController.postAddToCart
 );
 
-router.post("/add-quantity/:itemId", isAuth, cartController.postAddQuantity);
+router.post("/add-quantity/:itemId", userAuth, cartController.postAddQuantity);
 
-router.get("/cart", isAuth, cartController.getCart);
+router.get("/cart", userAuth, cartController.getCart);
 
-router.delete("/delete-item/:itemId", isAuth, cartController.deleteCartItem);
+router.delete("/delete-item/:itemId", userAuth, cartController.deleteCartItem);
 
 module.exports = router;

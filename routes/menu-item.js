@@ -2,7 +2,7 @@ const express = require("express");
 const { body } = require("express-validator");
 const Multer = require("multer");
 
-const isAuth = require("../util/is-auth");
+const restAuth = require("../util/rest-Auth");
 const menuController = require("../controllers/menu-item");
 
 const router = express.Router();
@@ -34,7 +34,7 @@ router.put(
     body("description").isAlpha().trim(),
     body("price").isNumeric().trim(),
   ],
-  isAuth,
+  restAuth,
   menuController.putAddItem
 );
 
@@ -46,10 +46,10 @@ router.post(
     body("description").isAlpha().trim(),
     body("price").isNumeric().trim(),
   ],
-  isAuth,
+  restAuth,
   menuController.postEditMenuItem
 );
 
-router.delete("/delete-item/:id", isAuth, menuController.deleteItem);
+router.delete("/delete-item/:id", restAuth, menuController.deleteItem);
 
 module.exports = router;

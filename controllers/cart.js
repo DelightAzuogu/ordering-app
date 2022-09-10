@@ -5,23 +5,6 @@ const { Restaurant } = require("../model/restaurant");
 const newError = require("../util/error");
 const ValErrorCheck = require("../util/validationError");
 
-// this check for the existence of the user and the item in the database
-const userItemcheck = async (req) => {
-  const userId = req.userId;
-  const user = await User.findOne({ id: userId });
-  if (!user) {
-    return newError("user not found", 400);
-  }
-
-  const itemId = req.params.itemId;
-  const item = await MenuItem.findOne({ id: itemId });
-  if (!item) {
-    return newError("menu Item not found", 400);
-  }
-
-  return true;
-};
-
 // adds to the cart
 exports.postAddToCart = async (req, res, next) => {
   try {
@@ -29,20 +12,20 @@ exports.postAddToCart = async (req, res, next) => {
     if (valErr) {
       throw valErr;
     }
-
-    const check = await userItemcheck(req);
-    if (check !== true) {
-      throw check;
-    }
     const itemId = req.params.itemId;
     const userId = req.userId;
 
-    const item = await MenuItem.findOne({ id: itemId });
+    //check for menu item
+    const item = await MenuItem.findOne({ itemId });
+    if (!item) {
+      return newError("menu Item not found", 400);
+    }
 
     const cartItem = await Cart.findOne({
       itemId,
       userId,
     });
+
     //increase the quantity if the item is already in the cart
     if (cartItem) {
       cartItem.quantity += Number(req.body.quantity);
@@ -78,12 +61,7 @@ exports.postAddToCart = async (req, res, next) => {
 //get the items in a users cart
 exports.getCart = async (req, res, next) => {
   try {
-    const userId = req.userId;
-    const user = await User.findOne({ id: userId });
-    if (!user) {
-      throw newError("User not found", 400);
-    }
-    const cart = await Cart.find({ userId });
+    const cart = await Cart.find({ userId: req.userId });
 
     res.status(200).json({ msg: "cart items", cart });
   } catch (err) {
@@ -93,21 +71,26 @@ exports.getCart = async (req, res, next) => {
 
 exports.postAddQuantity = async (req, res, next) => {
   try {
-    const check = await userItemcheck(req);
-    if (check !== true) {
-      throw check;
-    }
     const itemId = req.params.itemId;
     const userId = req.userId;
 
+    //check for menu item
+    const item = await MenuItem.findOne({ itemId });
+    if (!item) {
+      return newError("menu Item not found", 400);
+    }
+
+    //checking for cart item
     const cartItem = await Cart.findOne({ itemId, userId });
 
     if (!cartItem) {
       throw newError("cart item not found", 400);
     }
 
+    //increase the quantity
     cartItem.quantity++;
     await cartItem.save();
+
     res.status(201).json({ msg: "increased" });
   } catch (err) {
     next(err);
@@ -117,13 +100,15 @@ exports.postAddQuantity = async (req, res, next) => {
 //delete item from a users cart
 exports.deleteCartItem = async (req, res, next) => {
   try {
-    const check = await userItemcheck(req);
-    if (check !== true) {
-      throw check;
-    }
     const itemId = req.params.itemId;
     const userId = req.userId;
 
+    //check for menu item
+    const item = await MenuItem.findOne({ itemId });
+    if (!item) {
+      return newError("menu Item not found", 400);
+    }
+    //check for cart item
     const cartItem = await Cart.findOneAndDelete({ itemId, userId });
 
     if (!cartItem) {

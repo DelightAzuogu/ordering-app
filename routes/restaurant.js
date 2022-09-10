@@ -3,7 +3,7 @@ const { body } = require("express-validator");
 
 const restaurantController = require("../controllers/restaurant");
 const { Restaurant } = require("../model/restaurant");
-const isAuth = require("../util/is-auth");
+const restAuth = require("../util/rest-Auth");
 
 const router = express.Router();
 
@@ -56,7 +56,7 @@ router.post(
 
 router.put(
   "/edit",
-  isAuth,
+  restAuth,
   [
     body("name"),
     body("address").isLength({ max: 50 }).withMessage("exceed length"),
@@ -70,11 +70,11 @@ router.put(
 router.get(
   "/check-password",
   body("password").trim().isLength({ min: 5 }),
-  isAuth,
+  restAuth,
   restaurantController.getCheckPassword
 );
 
-router.delete("/", isAuth, restaurantController.deleteRestaurant);
+router.delete("/", restAuth, restaurantController.deleteRestaurant);
 
 router.get("/:id", restaurantController.getRestaurant);
 

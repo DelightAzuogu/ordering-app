@@ -13,46 +13,40 @@ const newError = require("../util/error");
 
 //ADD menu item
 exports.putAddItem = async (req, res, next) => {
-  const err = validationError(req);
-  if (err) next(err);
-
-  //check for existence od restaurant
-  const rest = await Restaurant.findOne({ id: req.userId });
-  if (!rest) {
-    next(newError("invalid restaurant", 400));
-  }
-
-  const name = req.body.name;
-  const description = req.body.description;
-  const price = req.body.price;
-  const restId = req.userId;
-
-  //converting the img buffer to a readable stream
-  const stream = Readable.from(req.file.buffer);
-
-  //uploading the img to google drive
-  const uploadImg = await googleDriveUpload(req, stream);
-  if (uploadImg instanceof Error) {
-    next(uploadImg);
-  }
-
-  const imageId = uploadImg.data.id;
-
-  // get the img link
-  const imgLink = await googleDriveGetLink(uploadImg.data.id);
-
-  if (imgLink instanceof Error) {
-    //delete the img if eerror
-    const deleteImg = googleDriveDelete(imageId);
-    if (deleteImg instanceof Error) {
-      next(deleteImg);
-    }
-    next(imgLink);
-  }
-  const imageUrl = imgLink.data.webViewLink;
-
-  //create item
   try {
+    const err = validationError(req);
+    if (err) next(err);
+
+    const name = req.body.name;
+    const description = req.body.description;
+    const price = req.body.price;
+    const restId = req.restId;
+
+    //converting the img buffer to a readable stream
+    const stream = Readable.from(req.file.buffer);
+
+    //uploading the img to google drive
+    const uploadImg = await googleDriveUpload(req, stream);
+    if (uploadImg instanceof Error) {
+      throw uploadImg;
+    }
+
+    const imageId = uploadImg.data.id;
+
+    // get the img link
+    const imgLink = await googleDriveGetLink(uploadImg.data.id);
+
+    if (imgLink instanceof Error) {
+      //delete the img if eerror
+      const deleteImg = googleDriveDelete(imageId);
+      if (deleteImg instanceof Error) {
+        throw deleteImg;
+      }
+      throw imgLink;
+    }
+    const imageUrl = imgLink.data.webViewLink;
+
+    //create item
     const createMenuItem = {
       name,
       price,
@@ -65,6 +59,7 @@ exports.putAddItem = async (req, res, next) => {
     const menuItem = await MenuItem.create(createMenuItem);
 
     //add it to the menu of the restaurant
+    const rest = await Restaurant.findOne({ id: req.restId });
     rest.menu.push(menuItem);
     const updatedrest = rest.save();
 
@@ -80,18 +75,10 @@ exports.putAddItem = async (req, res, next) => {
 
 //UPDATE ITEM
 exports.postEditMenuItem = async (req, res, next) => {
-  //validation error
-  const err = validationError(req);
-  if (err) next(err);
-
   try {
-    //check rest
-    const rest = await Restaurant.findOne({ id: req.userId });
-    if (!rest) {
-      const err = new Error("invalid restaurant");
-      err.status = 400;
-      throw err;
-    }
+    //validation error
+    const err = validationError(req);
+    if (err) next(err);
 
     const name = req.body.name;
     const description = req.body.description;
@@ -150,14 +137,14 @@ exports.postEditMenuItem = async (req, res, next) => {
     );
 
     //updating the restaurant item
-    const newMenu = rest.menu.map((element) => {
+    const rest = await Restaurant.findOne({ id: req.restId });
+    rest.menu = rest.menu.map((element) => {
       if (element.id === menuItem.id) {
         return updatedMenuItem;
       } else {
         return element;
       }
     });
-    rest.menu = newMenu;
     const updatedRest = await rest.save();
 
     res.status(201).json({
@@ -173,13 +160,6 @@ exports.postEditMenuItem = async (req, res, next) => {
 //DELETE ITEM
 exports.deleteItem = async (req, res, next) => {
   try {
-    //check rest
-    const rest = await Restaurant.findOne({ id: req.userId });
-    if (!rest) {
-      const err = new Error("invalid restaurant");
-      err.status = 400;
-      throw err;
-    }
     const id = req.params.id;
 
     //find and delete the menuItem
@@ -192,12 +172,13 @@ exports.deleteItem = async (req, res, next) => {
     }
 
     //deleting the item in the restaurant menu
+    const rest = await Restaurant.findOne({ id: req.restId });
     rest.menu = rest.menu.filter((element) => {
       if (element.id != id) {
         return element;
       }
     });
-    await rest.save();
+    rest.save();
 
     //deleting from carts as well
     await Cart.deleteMany({ itemId: menuItem.id });
