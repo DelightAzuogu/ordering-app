@@ -3,9 +3,11 @@ require("dotenv").config();
 
 module.exports = (cb) => {
   mongoose
-    .connect("mongodb://orderingapp-mongo_db-1:27017")
+    .connect(process.env.MONGODB_STRING, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    })
     .then(() => {
-      console.log("Mongodb connected....");
       cb();
     })
     .catch((err) => console.log(err.message));

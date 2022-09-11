@@ -27,19 +27,8 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 
-mongoose
-  .connect("mongodb://localhost:27017/ordering-app", {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => {
-    console.log("Mongodb connected....");
-    app.listen(PORT, () => {
-      console.log("Server started on port " + PORT + "...");
-    });
-  })
-  .catch((err) => console.log(err));
-
-mongoose.connection.on("disconnected", () => {
-  console.log("Mongoose connection is disconnected...");
+database(() => {
+  app.listen(PORT, () => {
+    console.log("Server started on port " + PORT + "...");
+  });
 });
