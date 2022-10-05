@@ -6,6 +6,7 @@ const userRoute = require("./routes/user");
 const restRoute = require("./routes/restaurant");
 const menuRoute = require("./routes/menu-item");
 const cartRoute = require("./routes/cart");
+const orderRoute = require("./routes/order");
 const database = require("./initDB");
 
 const app = express();
@@ -16,6 +17,7 @@ app.use("/user", userRoute);
 app.use("/restaurant", restRoute);
 app.use("/menu", menuRoute);
 app.use("/cart", cartRoute);
+app.use("/order", orderRoute);
 
 app.use((err, req, res, next) => {
   console.log(err);

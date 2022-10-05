@@ -1,23 +1,20 @@
-version: "3"
+version: '3.8'
 
 services:
-  m_db:
-    container_name: m_db
+  orderingapp:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    ports:
+      - 3000:3000
+    env_file: .env
+
+  db:
     image: mongo
     ports:
-      - '27027:27017'
-    networks: 
-      - my-network
+      - 27016:27017
+    volumes:
+      - orderingapp:/data/db
 
-  app:
-    # container_name: ordering-app
-    restart: always
-    build: .
-    ports: 
-      - '9000:9000'
-    networks: 
-      - my-network
-
-networks: 
-  my-network:
-    driver: bridge
+volumes:
+  orderingapp:

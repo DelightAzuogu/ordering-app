@@ -1,57 +1,27 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 require("dotenv").config();
+const { default: mongoose } = require("mongoose");
+const { ObjectId } = require("mongodb");
 
 const { Restaurant } = require("../model/restaurant");
 const ValErrorCheck = require("../util/validationError");
 const newError = require("../util/error");
 const { MenuItem } = require("../model/menu-item");
 const { googleDriveDelete } = require("../util/google-drive");
-const Cart = require("../model/cart");
+const { Cart } = require("../model/cart");
 
 //sign auth token
-const _signToken = (user) => {
+const _signToken = (rest) => {
   return jwt.sign(
     {
-      id: user.id,
+      id: rest.id,
     },
     process.env.JWT_SECRET,
     {
       expiresIn: "20h",
     }
   );
-};
-
-//login restaurants
-exports.postLoginRest = async (req, res, next) => {
-  const valErr = ValErrorCheck(req);
-  if (valErr) {
-    next(valErr);
-  }
-
-  const email = req.body.email;
-  const pw = req.body.password;
-  try {
-    const rest = await Restaurant.findOne({ email });
-
-    //check password
-    const pwEqual = bcrypt.compareSync(pw, rest.password);
-    if (!pwEqual) {
-      throw newError("invalid password", 401);
-    }
-
-    const token = _signToken(rest);
-
-    rest.status = true;
-    await rest.save();
-
-    //check items in the menu
-    const hasItem = rest.menu.length > 0;
-
-    res.status(200).json({ msg: "logged in", hasItem, token });
-  } catch (err) {
-    next(err);
-  }
 };
 
 //restauratn sign up page
@@ -73,7 +43,7 @@ exports.putSignupRest = async (req, res, next) => {
     }
 
     //hash the password
-    const hashpw = await bcrypt.hash(pw, 12);
+    const hashpw = bcrypt.hashSync(pw, 12);
 
     //create the rest
     const createRest = {
@@ -94,19 +64,48 @@ exports.putSignupRest = async (req, res, next) => {
   }
 };
 
+//login restaurants
+exports.postLoginRest = async (req, res, next) => {
+  try {
+    const valErr = ValErrorCheck(req);
+    if (valErr) {
+      throw valErr;
+    }
+
+    const rest = await Restaurant.findOne({ email: req.body.email });
+
+    //check password
+    let pwEqual = await bcrypt.compare(req.body.password, rest.password);
+    if (!pwEqual) {
+      throw newError("invalid password", 401);
+    }
+
+    const token = _signToken(rest);
+
+    rest.status = true;
+    await rest.save();
+
+    //check items in the menu
+    const menuItems = await MenuItem.find({ restaurantId: rest.id });
+    const hasItem = menuItems.length > 0;
+
+    res.status(200).json({ msg: "logged in", hasItem, token });
+  } catch (err) {
+    next(err);
+  }
+};
+
 //editing the rest
 exports.putEditRestaurant = async (req, res, next) => {
   const valErr = ValErrorCheck(req);
   if (valErr) next(valErr);
 
-  const restId = req.restId;
   try {
     //updating the rest
     const rest = await Restaurant.findOneAndUpdate(
-      { id: restId },
+      { _id: req.rest_Id },
       {
         name: req.body.name,
-        address: req.body.address,
         phone: req.body.phone,
       }
     );
@@ -123,7 +122,7 @@ exports.getCheckPassword = async (req, res, next) => {
   if (valErr) next(valErr);
 
   try {
-    const rest = await Restaurant.findOne({ id: req.restId });
+    const rest = await Restaurant.findOne({ _id: req.rest_Id });
 
     const passwordMatch = bcrypt.compareSync(req.body.password, rest.password);
     if (passwordMatch) {
@@ -136,55 +135,45 @@ exports.getCheckPassword = async (req, res, next) => {
   }
 };
 
-//geting the rest
-exports.getRestaurant = async (req, res, next) => {
-  const restId = req.params.id;
+//deleting the rest
+exports.deleteRestaurant = async (req, res, next) => {
+  const restId = req.rest_Id;
+
   try {
-    const rest = await Restaurant.findOne({ id: restId });
-    if (!rest) {
-      throw newError("restaurant not found", 400);
+    const rest = await Restaurant.findOneAndDelete({ _id: restId });
+
+    //delete the menu items
+    const menuItems = await MenuItem.find({ restaurantId: req.restId });
+
+    for (let i = 0; i < menuItems.length; i++) {
+      const deleteImg = googleDriveDelete(menuItems[i].imageId);
+      if (deleteImg instanceof Error) {
+        throw deleteImg;
+      }
+      console.log(menuItems[i].id);
+      await MenuItem.deleteMany({ id: menuItems[i].id });
     }
 
-    res.status(200).json({ restaurant: rest });
+    //delete cartItems
+    await Cart.deleteMany({ restaurantId: restId });
+
+    res.status(200).json({ msg: "deleted" });
   } catch (err) {
     next(err);
   }
 };
 
-//deleting menu items
-//not an end point, it is used for the deleting the rest
-const deleteMenuItem = async (id) => {
+//geting the rest
+exports.getRestaurant = async (req, res, next) => {
   try {
-    const menuItem = await MenuItem.findOneAndDelete({ id });
-    const deleteImg = googleDriveDelete(menuItem.imageId);
-    if (deleteImg instanceof Error) {
-      throw deleteImg;
+    const restId = req.params.id;
+
+    const rest = await Restaurant.find({ _id: ObjectId(restId) });
+    if (!rest) {
+      throw newError("restaurant not found", 400);
     }
 
-    await Cart.deleteMany({ itemId: menuItem.id });
-
-    return true;
-  } catch (err) {
-    return err;
-  }
-};
-
-//deleting the rest
-exports.deleteRestaurant = async (req, res, next) => {
-  const restId = req.restId;
-
-  try {
-    const rest = await Restaurant.findOneAndDelete({ id: restId });
-
-    //delete the menu items
-    for (let i = 0; i < rest.menu.length; i++) {
-      const deleteItem = await deleteMenuItem(rest.menu[i].id);
-      if (deleteItem instanceof Error) {
-        throw deleteItem;
-      }
-    }
-
-    res.status(200).json({ msg: "deleted" });
+    res.status(200).json({ restaurant: rest });
   } catch (err) {
     next(err);
   }

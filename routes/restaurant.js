@@ -12,11 +12,11 @@ router.put(
   "/signup",
   [
     body("name"),
-    body("address").isLength({ max: 50 }).withMessage("exceed length"),
     body("phone")
       .isNumeric({ no_symbols: false })
       .withMessage("invalid phone number"),
     body("password").trim().isLength({ min: 5 }),
+    body("confirmPassword").trim().isLength({ min: 5 }),
     body("email")
       .isEmail()
       .withMessage("Please enter a valid email.")
@@ -54,12 +54,12 @@ router.post(
   restaurantController.postLoginRest
 );
 
+//edit route
 router.put(
   "/edit",
   restAuth,
   [
     body("name"),
-    body("address").isLength({ max: 50 }).withMessage("exceed length"),
     body("phone")
       .isNumeric({ no_symbols: false })
       .withMessage("invalid phone number"),
@@ -67,6 +67,7 @@ router.put(
   restaurantController.putEditRestaurant
 );
 
+//check password
 router.get(
   "/check-password",
   body("password").trim().isLength({ min: 5 }),

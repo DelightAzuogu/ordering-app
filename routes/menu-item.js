@@ -26,24 +26,26 @@ const fileFilter = (req, file, cb) => {
 
 const upload = new Multer({ storage: memoryStorage(), fileFilter });
 
+//add-item
 router.put(
   "/add-item",
   upload.single("image"),
   [
-    body("name").isAlpha().trim(),
-    body("description").isAlpha().trim(),
+    body("name").isAscii().trim(),
+    body("description").isAscii().trim(),
     body("price").isNumeric().trim(),
   ],
   restAuth,
   menuController.putAddItem
 );
 
+//edi-teim
 router.post(
   "/edit-item/:id",
   upload.single("image"),
   [
-    body("name").isAlpha().trim(),
-    body("description").isAlpha().trim(),
+    body("name").isAscii().trim(),
+    body("description").isAscii().trim(),
     body("price").isNumeric().trim(),
   ],
   restAuth,

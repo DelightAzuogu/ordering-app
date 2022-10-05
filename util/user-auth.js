@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const { ObjectId } = require("mongodb");
 const { Restaurant } = require("../model/restaurant");
 const User = require("../model/user");
 const newError = require("./error");
@@ -18,11 +19,13 @@ module.exports = async (req, res, next) => {
     }
 
     req.userId = decryptToken.id;
+    req.user_Id = ObjectId(req.userId);
 
-    const user = await User.find({ id: req.userId });
+    const user = await User.find({ _id: req.userId });
     if (!user) {
       throw newError("user not found", 400);
     }
+    req.user = user;
 
     next();
   } catch (err) {

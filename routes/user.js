@@ -11,8 +11,8 @@ const router = express.Router();
 router.put(
   "/signup",
   [
-    body("firstname").isAlpha().withMessage("invalid name"),
-    body("lastname").isAlpha().withMessage("invalid name"),
+    body("firstname").isAlpha().withMessage("invalid name").trim(),
+    body("lastname").isAlpha().withMessage("invalid name").trim(),
     body("email")
       .isEmail()
       .withMessage("Please enter a valid email.")
@@ -25,7 +25,11 @@ router.put(
       })
       .normalizeEmail()
       .trim(),
-    body("password").trim().isLength({ min: 5 }),
+    body("password").trim().isLength({ min: 5 }).trim(),
+    body("confirmPassword").trim().isLength({ min: 5 }).trim(),
+    body("phone").isNumeric().trim(),
+    body("address").isAlphanumeric().trim(),
+    body("city").trim(),
   ],
   userController.putSignupUser
 );
@@ -34,7 +38,7 @@ router.put(
 router.post(
   "/login",
   [
-    body("password").trim().isLength({ min: 5 }),
+    body("password").trim().isLength({ min: 5 }).trim(),
     body("email")
       .isEmail()
       .withMessage("Please enter a valid email.")
@@ -51,15 +55,24 @@ router.post(
   userController.postLoginUser
 );
 
+//edit details
 router.put(
   "/edit",
   [
-    body("firstname").isAlpha().withMessage("invalid name"),
-    body("lastname").isAlpha().withMessage("invalid name"),
-    body("password").trim().isLength({ min: 5 }),
+    body("firstname").isAlpha().withMessage("invalid name").trim(),
+    body("lastname").isAlpha().withMessage("invalid name").trim(),
+    body("phone").isNumeric().trim(),
   ],
   userAuth,
-  userController.putEditUser
+  userController.putEditUserDetails
+);
+
+//confirm password
+router.post(
+  "/check-password",
+  [body("password").trim().isLength({ min: 5 })],
+  userAuth,
+  userController.postConfirmPassword
 );
 
 module.exports = router;

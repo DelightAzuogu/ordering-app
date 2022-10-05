@@ -6,17 +6,28 @@ const cartController = require("../controllers/cart");
 
 const router = express.Router();
 
+//add item
 router.post(
   "/add-to-cart/:itemId",
-  [body("quantity").isNumeric().withMessage("invalid quantity")],
+  [body("quantity").isInt({ gt: 0 }).trim()],
   userAuth,
   cartController.postAddToCart
 );
 
+//increase quanity by one
 router.post("/add-quantity/:itemId", userAuth, cartController.postAddQuantity);
 
-router.get("/cart", userAuth, cartController.getCart);
+//decrease the quantity  by one
+router.post(
+  "/remove-quantity/:itemId",
+  userAuth,
+  cartController.postRemoveQuantity
+);
 
+//delete an item from the cart
 router.delete("/delete-item/:itemId", userAuth, cartController.deleteCartItem);
+
+//get cart
+router.get("/", userAuth, cartController.getCart);
 
 module.exports = router;

@@ -2,27 +2,39 @@ const { Schema, default: mongoose } = require("mongoose");
 const { MenuItem, menuItemSchema } = require("./menu-item");
 
 const orderSchema = new Schema({
-  itemId: {
+  userId: {
     type: String,
-    require: true,
+    required: true,
   },
   restaurantId: {
     type: String,
-    require: true,
+    required: true,
   },
-  userId: {
-    type: String,
-    require: true,
-  },
-  quantity: {
+  price: {
     type: Number,
-    require: true,
-    default: 1,
+    required: true,
   },
-  item: {
-    type: menuItemSchema,
-    require: true,
+  orderTime: {
+    type: Number,
+    required: true,
+    default: Date.now(),
   },
+  items: [
+    {
+      price: {
+        type: Number,
+        required: true,
+      },
+      quantity: {
+        type: Number,
+        required: true,
+      },
+      item: {
+        type: menuItemSchema,
+        required: true,
+      },
+    },
+  ],
 });
 
-module.exports = mongoose.model("Order", orderSchema);
+exports.Order = mongoose.model("Order", orderSchema);

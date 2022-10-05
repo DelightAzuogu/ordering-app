@@ -16,12 +16,24 @@ const userSchema = new Schema({
   },
   phone: {
     type: Number,
-    required: false,
+    required: true,
   },
   password: {
     type: String,
     required: true,
   },
+  location: [
+    {
+      address: {
+        type: String,
+        required: true,
+      },
+      city: {
+        type: String,
+        required: true,
+      },
+    },
+  ],
 });
 
 module.exports = mongoose.model("User", userSchema);

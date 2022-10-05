@@ -8,43 +8,48 @@ const {
   googleDriveGetLink,
   googleDriveUpload,
 } = require("../util/google-drive");
-const Cart = require("../model/cart");
+const { Cart } = require("../model/cart");
 const newError = require("../util/error");
+const { ObjectId } = require("mongodb");
 
 //ADD menu item
 exports.putAddItem = async (req, res, next) => {
   try {
     const err = validationError(req);
-    if (err) next(err);
+    if (err) throw err;
 
     const name = req.body.name;
     const description = req.body.description;
     const price = req.body.price;
     const restId = req.restId;
 
-    //converting the img buffer to a readable stream
-    const stream = Readable.from(req.file.buffer);
+    let imageId = "";
+    let imageUrl = "";
 
-    //uploading the img to google drive
-    const uploadImg = await googleDriveUpload(req, stream);
-    if (uploadImg instanceof Error) {
-      throw uploadImg;
-    }
-
-    const imageId = uploadImg.data.id;
-
-    // get the img link
-    const imgLink = await googleDriveGetLink(uploadImg.data.id);
-
-    if (imgLink instanceof Error) {
-      //delete the img if eerror
-      const deleteImg = googleDriveDelete(imageId);
-      if (deleteImg instanceof Error) {
-        throw deleteImg;
+    if (req.file) {
+      //converting the img buffer to a readable stream
+      const stream = Readable.from(req.file.buffer);
+      //uploading the img to google drive
+      const uploadImg = await googleDriveUpload(req, stream);
+      if (uploadImg instanceof Error) {
+        throw uploadImg;
       }
-      throw imgLink;
+
+      imageId = uploadImg.data.id;
+
+      // get the img link
+      const imgLink = await googleDriveGetLink(uploadImg.data.id);
+
+      if (imgLink instanceof Error) {
+        //delete the img if eerror
+        const deleteImg = googleDriveDelete(imageId);
+        if (deleteImg instanceof Error) {
+          throw deleteImg;
+        }
+        throw imgLink;
+      }
+      imageUrl = imgLink.data.webViewLink;
     }
-    const imageUrl = imgLink.data.webViewLink;
 
     //create item
     const createMenuItem = {
@@ -58,34 +63,25 @@ exports.putAddItem = async (req, res, next) => {
 
     const menuItem = await MenuItem.create(createMenuItem);
 
-    //add it to the menu of the restaurant
-    const rest = await Restaurant.findOne({ id: req.restId });
-    rest.menu.push(menuItem);
-    const updatedrest = rest.save();
-
     res.status(201).json({
       msg: "created",
-      menuItemId: menuItem.id,
-      restId: updatedrest.id,
+      id: menuItem.id,
     });
   } catch (err) {
     next(err);
   }
 };
 
-//UPDATE ITEM
+//edit ITEM
 exports.postEditMenuItem = async (req, res, next) => {
   try {
     //validation error
     const err = validationError(req);
     if (err) next(err);
 
-    const name = req.body.name;
-    const description = req.body.description;
-    const price = req.body.price;
     const itemId = req.params.id;
 
-    const menuItem = await MenuItem.findOne({ id: itemId });
+    let menuItem = await MenuItem.findOne({ _id: ObjectId(itemId) });
 
     let imageId = menuItem.imageId;
     let imageUrl = menuItem.imageUrl;
@@ -121,36 +117,37 @@ exports.postEditMenuItem = async (req, res, next) => {
     }
 
     //update the menuitem
-    menuItem.name = name;
-    menuItem.description = description;
-    menuItem.price = price;
+    menuItem.name = req.body.name;
+    menuItem.description = req.body.description;
+    menuItem.price = req.body.price;
     menuItem.imageUrl = imageUrl;
     menuItem.imageId = imageId;
-    const updatedMenuItem = await menuItem.save();
+    menuItem = await menuItem.save();
 
-    //updating the cart items
-    await Cart.updateMany(
-      { itemId: menuItem.id },
-      {
-        item: menuItem,
-      }
-    );
-
-    //updating the restaurant item
-    const rest = await Restaurant.findOne({ id: req.restId });
-    rest.menu = rest.menu.map((element) => {
-      if (element.id === menuItem.id) {
-        return updatedMenuItem;
-      } else {
-        return element;
-      }
+    //updateing the prices in the carts as well
+    let cartItems = await await Cart.find({
+      restaurantId: menuItem.restaurantId,
+      "items.itemId": menuItem.id,
     });
-    const updatedRest = await rest.save();
+    if (cartItems.length > 0) {
+      for (let i = 0; i < cartItems.length; i++) {
+        cartItems[i].items = cartItems[i].items.map((value) => {
+          if (value.itemId == itemId) {
+            //remove the item price from cart -- change the item price -- add the item price back to cart
+            cartItems[i].price -= value.price;
+            value.price = value.quantity * menuItem.price;
+            cartItems[i].price += value.price;
+            return value;
+          } else {
+            return value;
+          }
+        });
+        cartItems[i].save();
+      }
+    }
 
     res.status(201).json({
       msg: "updated",
-      restId: updatedRest.id,
-      menuItemId: updatedMenuItem.id,
     });
   } catch (err) {
     next(err);
@@ -160,10 +157,13 @@ exports.postEditMenuItem = async (req, res, next) => {
 //DELETE ITEM
 exports.deleteItem = async (req, res, next) => {
   try {
-    const id = req.params.id;
+    const itemId = req.params.id;
 
     //find and delete the menuItem
-    const menuItem = await MenuItem.findOneAndDelete({ id });
+    const menuItem = await MenuItem.findOneAndDelete({ _id: ObjectId(itemId) });
+    if (!menuItem) {
+      throw newError("item not found", 400);
+    }
 
     //delete the img from drive
     const deleteImg = googleDriveDelete(menuItem.imageId);
@@ -171,17 +171,30 @@ exports.deleteItem = async (req, res, next) => {
       throw deleteImg;
     }
 
-    //deleting the item in the restaurant menu
-    const rest = await Restaurant.findOne({ id: req.restId });
-    rest.menu = rest.menu.filter((element) => {
-      if (element.id != id) {
-        return element;
-      }
-    });
-    rest.save();
-
     //deleting from carts as well
-    await Cart.deleteMany({ itemId: menuItem.id });
+    const cartItems = await Cart.find({
+      restaurantId: menuItem.restaurantId,
+      "items.itemId": itemId,
+    });
+    for (let i = 0; i < cartItems.length; i++) {
+      cartItems[i].items = cartItems[i].items.filter((value) => {
+        if (value.itemId == menuItem.id) {
+          //reducing the cart price
+          cartItems[i].price -= value.price;
+          return false;
+        } else {
+          return true;
+        }
+      });
+      //deleteing the cart if there is no item inside
+      if (cartItems[i].items.length == 0) {
+        console.log("inside");
+        console.log();
+        await Cart.deleteOne({ _id: cartItems[i].id });
+      } else {
+        await cartItems[i].save();
+      }
+    }
 
     res.status(200).json({ msg: "deleted" });
   } catch (err) {

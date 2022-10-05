@@ -15,12 +15,25 @@ const restaurantSchema = new Schema({
     type: String,
     required: true,
   },
-  address: String,
+  location: {
+    required: false,
+    type: [
+      {
+        address: {
+          type: String,
+          required: true,
+        },
+        city: {
+          type: String,
+          required: true,
+        },
+      },
+    ],
+  },
   phone: {
     type: Number,
     required: true,
   },
-  menu: [menuItemSchema],
   orderCount: {
     type: Number,
     default: 0,
