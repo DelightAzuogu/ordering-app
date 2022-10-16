@@ -22,18 +22,21 @@ const userSchema = new Schema({
     type: String,
     required: true,
   },
-  location: [
-    {
-      address: {
-        type: String,
-        required: true,
+  location: {
+    type: [
+      {
+        address: {
+          type: String,
+          required: true,
+        },
+        city: {
+          type: String,
+          required: true,
+        },
       },
-      city: {
-        type: String,
-        required: true,
-      },
-    },
-  ],
+    ],
+    required: true,
+  },
 });
 
 module.exports = mongoose.model("User", userSchema);

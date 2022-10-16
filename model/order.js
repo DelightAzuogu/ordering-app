@@ -10,8 +10,17 @@ const orderSchema = new Schema({
     type: String,
     required: true,
   },
-  price: {
-    type: Number,
+  location: {
+    type: {
+      address: {
+        type: String,
+        required: true,
+      },
+      city: {
+        type: String,
+        required: true,
+      },
+    },
     required: true,
   },
   orderTime: {

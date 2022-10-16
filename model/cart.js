@@ -10,10 +10,6 @@ const cartSchema = new Schema({
     type: String,
     required: true,
   },
-  price: {
-    type: Number,
-    required: true,
-  },
   items: [
     {
       price: {
@@ -31,33 +27,5 @@ const cartSchema = new Schema({
     },
   ],
 });
-
-// const cartSchema = new Schema({
-//   itemId: {
-//     type: String,
-//     require: true,
-//   },
-//   price: {
-//     type: Number,
-//     require: true,
-//   },
-//   restaurantId: {
-//     type: String,
-//     require: true,
-//   },
-//   userId: {
-//     type: String,
-//     require: true,
-//   },
-//   quantity: {
-//     type: Number,
-//     require: true,
-//     default: 1,
-//   },
-//   item: {
-//     type: menuItemSchema,
-//     require: true,
-//   },
-// });
 
 exports.Cart = mongoose.model("Cart", cartSchema);

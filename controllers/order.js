@@ -3,8 +3,10 @@ const { Cart } = require("../model/cart");
 const { MenuItem } = require("../model/menu-item");
 const { Order } = require("../model/order");
 const { Restaurant } = require("../model/restaurant");
+const User = require("../model/user");
 const newError = require("../util/error");
 const { menuItemCheck } = require("../util/menu-item-check");
+const validationError = require("../util/validationError");
 
 //this checks id
 const checkOrder = async (id) => {
@@ -41,17 +43,18 @@ exports.postRestOrder = async (req, res, next) => {
     let createOrder = {
       userId,
       restaurantId: restId,
-      price: cart.price,
       items: [],
+      location: {
+        address: req.body.address,
+        city: req.body.city,
+      },
     };
 
     //add the items to the order
     for (let value of cart.items) {
       const item = await MenuItem.findOne({ _id: ObjectId(value.itemId) });
       //dont order items that have benn deleted
-      if (!item) {
-        createOrder.price -= value.price;
-      } else {
+      if (item) {
         await createOrder.items.push({
           price: value.price,
           quantity: value.quantity,
@@ -84,6 +87,11 @@ exports.postRestOrder = async (req, res, next) => {
 //order everything in the cart
 exports.postOrderAll = async (req, res, next) => {
   try {
+    const valErr = validationError(req);
+    if (valErr) {
+      throw valErr;
+    }
+
     const userId = req.userId;
 
     //find all the cart items
@@ -95,13 +103,18 @@ exports.postOrderAll = async (req, res, next) => {
       throw newError("items not found", 400);
     }
 
+    let createOrder;
+
     for (let cart of cartItems) {
       //creating the order template
-      let createOrder = {
+      createOrder = {
         userId,
         restaurantId: cart.restaurantId,
-        price: cart.price,
         items: [],
+        location: {
+          address: req.body.address,
+          city: req.body.city,
+        },
       };
       //fillig up the order items
       for (let value of cart.items) {
@@ -109,9 +122,7 @@ exports.postOrderAll = async (req, res, next) => {
         const item = await MenuItem.findOne({
           _id: ObjectId(value.itemId),
         });
-        if (!item) {
-          createOrder.price -= value.price;
-        } else {
+        if (item) {
           createOrder.items.push({
             price: value.price,
             quantity: value.quantity,
@@ -165,7 +176,6 @@ exports.deleteOrderItem = async (req, res, next) => {
     //update the order items
     order.items = order.items.filter((value) => {
       if (value.item.id == item.id) {
-        order.price -= value.price;
         return false;
       } else return true;
     });

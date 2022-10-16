@@ -7,6 +7,7 @@ const { Restaurant } = require("../model/restaurant");
 const newError = require("../util/error");
 const ValErrorCheck = require("../util/validationError");
 const { ObjectId } = require("mongodb");
+const { menuItemCheck } = require("../util/menu-item-check");
 
 //add to cart
 exports.postAddToCart = async (req, res, next) => {
@@ -20,11 +21,7 @@ exports.postAddToCart = async (req, res, next) => {
     const quantity = Number(req.body.quantity);
 
     //check for the menu item
-    const menuItem = await MenuItem.findOne({ _id: ObjectId(itemId) });
-    if (!menuItem) {
-      throw newError("item not found", 400);
-    }
-
+    const menuItem = await menuItemCheck(itemId);
     //check for cart item
     const cart = await Cart.findOne({
       restaurantId: menuItem.restaurantId,
@@ -34,20 +31,13 @@ exports.postAddToCart = async (req, res, next) => {
     if (cart) {
       //checking if the item is already in the cart
       if (cart.items.some((value) => value.itemId == itemId)) {
-        let newItemPrice;
-        //updateing the price of the item
+        //increasing the quantity if in cart already
         cart.items = cart.items.map((value) => {
           if (value.itemId == itemId) {
             let itemQuantity = value.quantity + quantity;
-
-            //this is the change the price of the entire restaurant cart
-            cart.price -= value.price;
-            newItemPrice = menuItem.price * itemQuantity;
-            cart.price += newItemPrice;
-
             const item = {
               quantity: itemQuantity,
-              price: newItemPrice,
+              price: menuItem.price * itemQuantity,
               itemId: itemId,
             };
             return item;
@@ -67,18 +57,20 @@ exports.postAddToCart = async (req, res, next) => {
           price,
         });
 
-        //updateing the cart price
-        cart.price += price;
         cart.save();
         res.status(201).json({ msg: "added" });
       }
     } else {
-      const price = menuItem.price * quantity;
       Cart.create({
         userId: req.userId,
         restaurantId: menuItem.restaurantId,
-        price,
-        items: [{ itemId, quantity, price }],
+        items: [
+          {
+            itemId,
+            quantity,
+            price: menuItem.price * quantity,
+          },
+        ],
       });
       res.status(201).json({ msg: "added" });
     }
@@ -93,10 +85,7 @@ exports.postAddQuantity = async (req, res, next) => {
     const itemId = req.params.itemId;
 
     //check for item in menu
-    const menuItem = await MenuItem.findOne({ _id: ObjectId(itemId) });
-    if (!menuItem) {
-      throw newError("item not found", 400);
-    }
+    const menuItem = await menuItemCheck(itemId);
 
     //check for user cart
     const cart = await Cart.findOne({
@@ -109,8 +98,6 @@ exports.postAddQuantity = async (req, res, next) => {
 
     cart.items = cart.items.map((value) => {
       if (value.itemId == itemId) {
-        //change the cart price
-        cart.price += menuItem.price;
         return {
           itemId,
           quantity: value.quantity + 1,
@@ -133,10 +120,7 @@ exports.postRemoveQuantity = async (req, res, next) => {
     const itemId = req.params.itemId;
 
     //check for item in menu
-    const menuItem = await MenuItem.findOne({ _id: ObjectId(itemId) });
-    if (!menuItem) {
-      throw newError("item not found", 400);
-    }
+    const menuItem = await menuItemCheck(itemId);
 
     //check for user cart
     const cart = await Cart.findOne({
@@ -149,9 +133,6 @@ exports.postRemoveQuantity = async (req, res, next) => {
 
     cart.items = cart.items.map((value) => {
       if (value.itemId == itemId) {
-        //change the cart price
-        cart.price -= menuItem.price;
-
         return {
           itemId,
           quantity: value.quantity - 1,
@@ -188,13 +169,9 @@ exports.deleteCartItem = async (req, res, next) => {
     const itemId = req.params.itemId;
 
     //check for menu item
-    const menuItem = await MenuItem.findOne({ _id: ObjectId(itemId) });
-    if (!menuItem) {
-      return newError("menu Item not found", 400);
-    }
+    const menuItem = await menuItemCheck(itemId);
 
     //check for cart item
-    // const cartItem = await Cart.findOneAndDelete({ itemId, userId });
     const cartItem = await Cart.findOne({
       userId: req.userId,
       restaurantId: menuItem.restaurantId,
@@ -208,7 +185,6 @@ exports.deleteCartItem = async (req, res, next) => {
       if (value.itemId != itemId) {
         return true;
       } else {
-        cartItem.price -= value.price;
         return false;
       }
     });
@@ -230,9 +206,22 @@ exports.deleteCartItem = async (req, res, next) => {
 //get the items in a users cart
 exports.getCart = async (req, res, next) => {
   try {
-    const cart = await Cart.find({ userId: req.userId });
+    //get all the carts of the user
+    const cart = await Cart.find({ userId: req.userId }).lean();
 
-    res.status(200).json({ msg: "cart items", cart });
+    //loop thruogh all the cart items
+    cart.forEach((cartItem) => {
+      let price = 0;
+      cartItem.items.forEach((menuItem) => {
+        price += menuItem.price;
+      });
+      cartItem["price"] = price;
+    });
+
+    res.status(200).json({
+      msg: "cart items",
+      cart,
+    });
   } catch (err) {
     next(err);
   }

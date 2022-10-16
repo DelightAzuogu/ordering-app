@@ -5,6 +5,7 @@ require("dotenv").config();
 const User = require("../model/user");
 const validationError = require("../util/validationError");
 const newError = require("../util/error");
+const { ObjectId } = require("mongodb");
 
 //sign the token
 const _signToken = (user) => {
@@ -133,6 +134,34 @@ exports.postConfirmPassword = async (req, res, next) => {
     } else {
       res.status(200).json({ msg: pwEqual });
     }
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.postAddLocation = async (req, res, next) => {
+  try {
+    const valErr = validationError(req);
+    if (valErr) {
+      throw valErr;
+    }
+
+    const address = req.body.address;
+    const city = req.body.city;
+    const userId = req.userId;
+
+    const user = User.findOne({ _id: ObjectId(userId) });
+    if (!user) {
+      throw newError("user not Found", 400);
+    }
+
+    user.location.push({
+      address,
+      city,
+    });
+    await user.save();
+
+    res.status(200).json({ msg: "inserted" });
   } catch (err) {
     next(err);
   }

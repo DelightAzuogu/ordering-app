@@ -28,8 +28,8 @@ router.put(
     body("password").trim().isLength({ min: 5 }).trim(),
     body("confirmPassword").trim().isLength({ min: 5 }).trim(),
     body("phone").isNumeric().trim(),
-    body("address").isAlphanumeric().trim(),
-    body("city").trim(),
+    body("address").isAlphanumeric().not().isEmpty().trim(),
+    body("city").isAlphanumeric().not().isEmpty().trim(),
   ],
   userController.putSignupUser
 );
@@ -73,6 +73,18 @@ router.post(
   [body("password").trim().isLength({ min: 5 })],
   userAuth,
   userController.postConfirmPassword
+);
+``;
+
+//add location
+router.post(
+  "/add-location",
+  userAuth,
+  [
+    body("address").isAlphanumeric().not().isEmpty().trim(),
+    body("city").isAlphanumeric().not().isEmpty().trim(),
+  ],
+  userController.postAddLocation
 );
 
 module.exports = router;

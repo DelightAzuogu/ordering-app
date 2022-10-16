@@ -7,10 +7,26 @@ const orderController = require("../controllers/order");
 
 const router = express.Router();
 
-router.post("/order-all", userAuth, orderController.postOrderAll);
+router.post(
+  "/order-all",
+  [
+    body("address").isAscii().not().isEmpty().trim(),
+    body("city").isAscii().not().isEmpty().trim(),
+  ],
+  userAuth,
+  orderController.postOrderAll
+);
 
 //order from only one rest
-router.post("/:restId", userAuth, orderController.postRestOrder);
+router.post(
+  "/:restId",
+  [
+    body("address").isAscii().not().isEmpty().trim(),
+    body("city").isAscii().not().isEmpty().trim(),
+  ],
+  userAuth,
+  orderController.postRestOrder
+);
 
 //delete item from order(user)
 router.delete(
